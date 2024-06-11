@@ -13,6 +13,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import java.util.ArrayList;
@@ -45,6 +46,9 @@ public class ResultView extends View {
         super.onDraw(canvas);
 
         if (mResults == null) return;
+        else {
+            Log.i("GRENDEL", "Results: " + mResults);
+        }
         for (Result result : mResults) {
             mPaintRectangle.setStrokeWidth(5);
             mPaintRectangle.setStyle(Paint.Style.STROKE);

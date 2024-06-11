@@ -43,11 +43,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements Runnable {
     private int mImageIndex = 0;
-    private String[] mTestImages = {"test1.png", "test2.jpg", "test3.png"};
+    private String[] mTestImages = {"071617.jpg", "122908.jpg", "160958.jpg"};
 
     private ImageView mImageView;
     private ResultView mResultView;
@@ -126,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
             public void onClick(View v) {
                 mResultView.setVisibility(View.INVISIBLE);
 
-                final CharSequence[] options = { "Choose from Photos", "Take Picture", "Cancel" };
+                final CharSequence[] options = {"Choose from Photos", "Take Picture", "Cancel"};
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("New Test Image");
 
@@ -136,12 +137,10 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                         if (options[item].equals("Take Picture")) {
                             Intent takePicture = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
                             startActivityForResult(takePicture, 0);
-                        }
-                        else if (options[item].equals("Choose from Photos")) {
+                        } else if (options[item].equals("Choose from Photos")) {
                             Intent pickPhoto = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI);
-                            startActivityForResult(pickPhoto , 1);
-                        }
-                        else if (options[item].equals("Cancel")) {
+                            startActivityForResult(pickPhoto, 1);
+                        } else if (options[item].equals("Cancel")) {
                             dialog.dismiss();
                         }
                     }
@@ -153,8 +152,8 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         final Button buttonLive = findViewById(R.id.liveButton);
         buttonLive.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-              final Intent intent = new Intent(MainActivity.this, ObjectDetectionActivity.class);
-              startActivity(intent);
+                final Intent intent = new Intent(MainActivity.this, ObjectDetectionActivity.class);
+                startActivity(intent);
             }
         });
 
@@ -166,14 +165,14 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 mProgressBar.setVisibility(ProgressBar.VISIBLE);
                 mButtonDetect.setText(getString(R.string.run_model));
 
-                mImgScaleX = (float)mBitmap.getWidth() / PrePostProcessor.mInputWidth;
-                mImgScaleY = (float)mBitmap.getHeight() / PrePostProcessor.mInputHeight;
+                mImgScaleX = (float) mBitmap.getWidth() / PrePostProcessor.mInputWidth;
+                mImgScaleY = (float) mBitmap.getHeight() / PrePostProcessor.mInputHeight;
 
-                mIvScaleX = (mBitmap.getWidth() > mBitmap.getHeight() ? (float)mImageView.getWidth() / mBitmap.getWidth() : (float)mImageView.getHeight() / mBitmap.getHeight());
-                mIvScaleY  = (mBitmap.getHeight() > mBitmap.getWidth() ? (float)mImageView.getHeight() / mBitmap.getHeight() : (float)mImageView.getWidth() / mBitmap.getWidth());
+                mIvScaleX = (mBitmap.getWidth() > mBitmap.getHeight() ? (float) mImageView.getWidth() / mBitmap.getWidth() : (float) mImageView.getHeight() / mBitmap.getHeight());
+                mIvScaleY = (mBitmap.getHeight() > mBitmap.getWidth() ? (float) mImageView.getHeight() / mBitmap.getHeight() : (float) mImageView.getWidth() / mBitmap.getWidth());
 
-                mStartX = (mImageView.getWidth() - mIvScaleX * mBitmap.getWidth())/2;
-                mStartY = (mImageView.getHeight() -  mIvScaleY * mBitmap.getHeight())/2;
+                mStartX = (mImageView.getWidth() - mIvScaleX * mBitmap.getWidth()) / 2;
+                mStartY = (mImageView.getHeight() - mIvScaleY * mBitmap.getHeight()) / 2;
 
                 Thread thread = new Thread(MainActivity.this);
                 thread.start();
@@ -181,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         });
 
         try {
-            mModule = LiteModuleLoader.load(MainActivity.assetFilePath(getApplicationContext(), "yolov5s.torchscript.ptl"));
+            mModule = LiteModuleLoader.load(MainActivity.assetFilePath(getApplicationContext(), "best_optimized.torchscript.ptl"));
             BufferedReader br = new BufferedReader(new InputStreamReader(getAssets().open("classes.txt")));
             String line;
             List<String> classes = new ArrayList<>();
@@ -239,11 +238,30 @@ public class MainActivity extends AppCompatActivity implements Runnable {
     public void run() {
         Bitmap resizedBitmap = Bitmap.createScaledBitmap(mBitmap, PrePostProcessor.mInputWidth, PrePostProcessor.mInputHeight, true);
         final Tensor inputTensor = TensorImageUtils.bitmapToFloat32Tensor(resizedBitmap, PrePostProcessor.NO_MEAN_RGB, PrePostProcessor.NO_STD_RGB);
-        IValue[] outputTuple = mModule.forward(IValue.from(inputTensor)).toTuple();
-        final Tensor outputTensor = outputTuple[0].toTensor();
-        final float[] outputs = outputTensor.getDataAsFloatArray();
-        final ArrayList<Result> results =  PrePostProcessor.outputsToNMSPredictions(outputs, mImgScaleX, mImgScaleY, mIvScaleX, mIvScaleY, mStartX, mStartY);
+        IValue temp_ivalue = IValue.from(inputTensor);
 
+        //Log.i("GRENDEL", ""+temp_ivalue.getClass().getSimpleName());
+        Tensor[] outputTuple = mModule.forward(
+                temp_ivalue
+        ).toTensorList();
+
+        //final Tensor outputTensor = outputTuple[0];
+        float[] output_0 = outputTuple[0].getDataAsFloatArray();
+        float[] output_1 = outputTuple[1].getDataAsFloatArray();
+        float[] output_2 = outputTuple[2].getDataAsFloatArray();
+        Log.i("GRENDELMASSDATA", ""+output_0[0]+" "+output_0[1]+" "+output_0[2]+" "+output_0[3]+" "+output_0[4]+" "+output_0[5]+" "+output_0[6]);
+        Log.i("GRENDELMASSDATA", ""+Arrays.asList(output_1));
+        Log.i("GRENDELMASSDATA", ""+Arrays.asList(output_2));
+        int length_0 = output_0.length;
+        int length_1 = output_1.length;
+        int length_2 = output_2.length;
+        float[] output_all = new float[length_0 + length_1 + length_2];
+        System.arraycopy(output_0, 0, output_all, 0, length_0);
+        System.arraycopy(output_1, 0, output_all, length_0, length_1);
+        System.arraycopy(output_2, 0, output_all, length_1, length_2);
+
+        ArrayList<Result> results = PrePostProcessor.outputsToNMSPredictions(output_all, mImgScaleX, mImgScaleY, mIvScaleX, mIvScaleY, mStartX, mStartY);
+        Log.i("GRENDEL", ""+results);
         runOnUiThread(() -> {
             mButtonDetect.setEnabled(true);
             mButtonDetect.setText(getString(R.string.detect));
